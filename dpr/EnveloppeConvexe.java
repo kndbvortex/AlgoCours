@@ -15,32 +15,18 @@ public class EnveloppeConvexe {
 	 */
 
 	public int cote(Point p0, Point p1, Point p) {
-		if(p0.getAbscisse() > p1.getAbscisse())
-			return cote(p1, p0, p);
-		if(p0.getAbscisse() == p1.getAbscisse()) {
-			if(p0.getOrdonne() > p1.getOrdonne()) {
-				return cote(p1, p0, p);
-			}
-		}
-		double a=0d, b=0d, c=0d, val=0d;
-		a = (p1.getOrdonne() - p0.getOrdonne());
-		b = 0 - (p1.getAbscisse() - p0.getAbscisse());
-		c = 0 - (a*p0.getAbscisse() + b*p0.getOrdonne());
-		byte dir = -1;
-		if(b != 0) {
-			if(a/b < 0)
-				dir = 1;
-		}
-		val = a*p.getAbscisse() + b*p.getOrdonne() + c;
-		if(val > 0)
-			return dir*1;
-		else if(val<0)
-			return -1*dir;
-		else
+		double det = (p1.getAbscisse()-p0.getAbscisse())*(p.getOrdonne()-p0.getOrdonne())-
+				(p1.getOrdonne()-p0.getOrdonne())*(p.getAbscisse()-p0.getAbscisse());
+		if(det > 0)
+			return 1;
+		else if(det == 0d)
 			return 0;
+		else
+			return -1;
 	}
 
 	/* Fonction utilisé dans l'aproche brute */
+	
 	private void findHull(Point[] points, Point A, Point B) {
 		if (points.length == 0) {
 
@@ -61,9 +47,9 @@ public class EnveloppeConvexe {
 			int cote2 = cote(C, B, A);
 			LinkedList<Point> S1 = new LinkedList<Point>(), S2 = new LinkedList<Point>();
 			for (Point p : points) {
-				if (cote(C, A, p) == -cote1)
+				if (cote(C, A, p) == 0 - cote1)
 					S1.add(p);
-				else if (cote(C, B, p) == -cote2)
+				else if (cote(C, B, p) == 0 - cote2)
 					S2.add(p);
 			}
 			findHull(S1.toArray(new Point[S1.size()]), A, C);
@@ -114,60 +100,56 @@ public class EnveloppeConvexe {
 				}
 			});
 
-			Point A = ECG[ECG.length - 1], B = ECD[0];
-			int idxhg = 0, idxhd = 0;
-			for (int i = 0; i < ECGy.length; i++) {
-				if (ECGy[i].equals(A)) {
-					idxhg = i;
-					break;
-				}
-			}
-			for (int i = 0; i < ECDy.length; i++) {
-				if (ECDy[i].equals(B)) {
-					idxhd = i;
-					break;
-				}
-			}
-			int gh = idxhg, dh = idxhd;
+			int gh = 0, dh = 0;
 			// Point de la tangente Haute
 			boolean ok = false;
 			while (!ok) {
-				ok = false;
-				while (dh < ECDy.length-1) {
-					if (cote(ECGy[gh], ECDy[dh], ECDy[dh + 1]) <= 0) {
-						dh++;
-					} else {
-						break;
+				ok = true;
+				while (dh < ECDy.length-1 && cote(ECGy[gh], ECDy[dh], ECDy[dh + 1]) >= 0) {
+					dh++;
+				}
+				while (gh < ECGy.length-1 && cote(ECDy[dh], ECGy[gh], ECGy[gh + 1]) <= 0) {
+					gh++;
+					ok = false;
+					continue;
+				}
+				for(int i=dh+1; i<ECDy.length; i++) {
+					if(cote(ECGy[gh], ECDy[dh], ECDy[i]) >= 0){
+						dh ++;
+						ok = false;
 					}
 				}
-				while (gh < ECGy.length-1) {
-					if (cote(ECDy[dh], ECGy[gh], ECGy[gh + 1]) >= 0) {
+				for(int i=gh+1; i<ECGy.length; i++) {
+					if(cote(ECDy[dh], ECGy[gh], ECGy[gh + 1]) <= 0) {
 						gh++;
-						ok = true;
-					} else {
-						break;
+						ok = false;
 					}
 				}
 			}
 
 			ok = false;
-			int gb = idxhg, db = idxhd;
+			int gb = gh, db = dh;
 			// Point de la tangente basse
 			while (!ok) {
-				ok = false;
-				while (db > 0) {
-					if (cote(ECGy[gb], ECDy[db], ECDy[db - 1]) < 0) {
+				ok = true;
+				while (db > 0 && cote(ECGy[gb], ECDy[db], ECDy[db - 1]) < 0) {
+					db--;
+				}
+				while (gb > 0 && cote(ECDy[db], ECGy[gb], ECGy[gb - 1]) >= 0) {
+					gb--;
+					ok = false;
+					continue;
+				}
+				for(int i=db-1; i>=0; i--) {
+					if(cote(ECGy[gb], ECDy[db], ECDy[i]) < 0){
 						db--;
-					} else {
-						break;
+						ok = false;
 					}
 				}
-				while (gb > 0) {
-					if (cote(ECDy[db], ECGy[gb], ECGy[gb - 1]) <= 0) {
+				for(int i=gb-1; i>=0; i--) {
+					if(cote(ECDy[db], ECGy[gb], ECGy[i]) >= 0) {
 						gb--;
-						ok = true;
-					} else {
-						break;
+						ok = false;
 					}
 				}
 			}
@@ -188,7 +170,7 @@ public class EnveloppeConvexe {
 			 * point quelconque l'angle (PhPb, PhP) doit être dans le sens direct
 			 */
 			for (int i = ECDy.length - 1; i >= 0; i--) {
-				if (cote(ECDy[db], ECDy[dh], ECDy[i]) >=0) {
+				if (cote(ECDy[db], ECDy[dh], ECDy[i]) <=0) {
 					enveloppe.add(ECDy[i]);
 				}
 			}
@@ -242,10 +224,10 @@ public class EnveloppeConvexe {
 		}
 	}
 
-	public void donnerEnveloppeConnexe(Point[] points) {
+	public Point[] donnerEnveloppeConnexe(Point[] points) {
 //		quickHull(points);
 		Arrays.sort(points);
-		System.out.println(Arrays.toString(methodeTangenteDPR(points)));
+		return methodeTangenteDPR(points);
 
 	}
 }
