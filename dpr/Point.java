@@ -42,6 +42,8 @@ public class Point implements Comparable<Point>{
         	return -1;
         else if(p.x < x)
         	return 1;
-        return 0;
+        if(p.y > y)
+        	return -1;
+        return 1;
     }
 }
